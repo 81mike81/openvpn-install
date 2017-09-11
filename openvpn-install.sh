@@ -235,9 +235,6 @@ else
 	# Get easy-rsa
 	wget -O ~/EasyRSA-3.0.3.tgz "https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.3/EasyRSA-3.0.3.tgz"
 	tar xzf ~/EasyRSA-3.0.3.tgz -C ~/
-	# Temporal fix for issue #353, which is caused by OpenVPN/easy-rsa#135
-	# Will be removed as soon as a new release of easy-rsa is available
-	sed -i 's/\[\[/\[/g;s/\]\]/\]/g;s/==/=/g' ~/EasyRSA-3.0.3/easyrsa
 	mv ~/EasyRSA-3.0.3/ /etc/openvpn/
 	mv /etc/openvpn/EasyRSA-3.0.3/ /etc/openvpn/easy-rsa/
 	chown -R root:root /etc/openvpn/easy-rsa/
@@ -307,8 +304,9 @@ user nobody
 group $GROUPNAME
 persist-key
 persist-tun
-status openvpn-status.log
-verb 3
+#status openvpn-status.log
+log /dev/null 2>&1
+verb 0
 crl-verify crl.pem" >> /etc/openvpn/server.conf
 	# Enable net.ipv4.ip_forward for the system
 	sed -i '/\<net.ipv4.ip_forward\>/c\net.ipv4.ip_forward=1' /etc/sysctl.conf
@@ -394,6 +392,7 @@ exit 0' > $RCLOCAL
 		fi
 	fi
 	# client-common.txt is created so we have a template to add further users later
+	UPDATERESOLVCONF=`ls /etc/openvpn | grep update`
 	echo "client
 dev tun
 proto $PROTOCOL
@@ -408,7 +407,10 @@ remote-cert-tls server
 auth SHA512
 cipher AES-256-CBC
 comp-lzo
-setenv opt block-outside-dns
+#setenv opt block-outside-dns
+script-security 2
+up /etc/openvpn/$UPDATERESOLVCONF
+down /etc/openvpn/$UPDATERESOLVCONF
 key-direction 1
 verb 3" > /etc/openvpn/client-common.txt
 	# Generates the custom client.ovpn
